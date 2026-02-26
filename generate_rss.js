@@ -3,6 +3,15 @@ const path = require('path');
 const config = require('./podcast_config.json');
 const episodes = require('./episodes.json');
 
+function escapeXml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 function formatDate(dateString) {
   const d = new Date(dateString);
   return d.toUTCString();
@@ -13,10 +22,10 @@ let itemsHtml = '';
 episodes.forEach(ep => {
   const isExternal = ep.audioFile.startsWith('http');
   const audioUrl = isExternal ? ep.audioFile : `${config.siteUrl}/episodes/${ep.audioFile}`;
-  
+
   itemsHtml += `
     <item>
-      <title>${ep.title}</title>
+      <title>${escapeXml(ep.title)}</title>
       <description><![CDATA[${ep.description}]]></description>
       <pubDate>${formatDate(ep.publishDate)}</pubDate>
       <enclosure url="${audioUrl}" length="${ep.fileSize}" type="audio/mpeg" />
