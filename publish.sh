@@ -1,5 +1,6 @@
 #!/bin/bash
 # Script thêm episode mới và cập nhật RSS
+# Tự động convert m4a → mp3 bằng ffmpeg
 
 if [ "$#" -ne 3 ]; then
     echo "Sử dụng: ./publish.sh <đường_dẫn_audio> \"<tiêu_đề>\" \"<mô_tả>\""
@@ -12,7 +13,22 @@ DESC=$3
 
 echo "Đang xử lý audio: $AUDIO_FILE"
 BASENAME=$(basename "$AUDIO_FILE")
-cp "$AUDIO_FILE" "episodes/$BASENAME"
+EXTENSION="${BASENAME##*.}"
+
+# Tự động convert m4a/m4b/aac → mp3 nếu không phải mp3
+if [ "$EXTENSION" != "mp3" ]; then
+    MP3_NAME="${BASENAME%.*}.mp3"
+    echo "🔄 Đang convert $BASENAME → $MP3_NAME ..."
+    ffmpeg -i "$AUDIO_FILE" -codec:a libmp3lame -qscale:a 2 -y "episodes/$MP3_NAME" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo "❌ Lỗi convert audio! Kiểm tra ffmpeg."
+        exit 1
+    fi
+    BASENAME="$MP3_NAME"
+    echo "✅ Convert thành công → episodes/$BASENAME"
+else
+    cp "$AUDIO_FILE" "episodes/$BASENAME"
+fi
 
 # Thêm vào episodes.json bằng Node.js script nhỏ
 node -e "
