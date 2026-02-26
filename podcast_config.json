@@ -1,0 +1,14 @@
+{
+  "title": "SANDO INVESTMENT PODCAST (SIP)",
+  "description": "Podcast chia sẻ về kiến thức kinh doanh, đầu tư, cuộc sống của Sando Investment",
+  "author": "Sando Triệu",
+  "email": "copetrieu93@gmail.com",
+  "language": "vi",
+  "category": "Business",
+  "subcategory": "Entrepreneurship",
+  "explicit": false,
+  "episodePrefix": "SIP",
+  "nextEpisodeNumber": 32,
+  "siteUrl": "https://copetrieu93.github.io/SANDO-PODCAST-AUTOMATION",
+  "coverImage": "cover.png"
+}
