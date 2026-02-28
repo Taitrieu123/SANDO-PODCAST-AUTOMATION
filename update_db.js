@@ -1,30 +1,68 @@
+/**
+ * 📌 SCRIPT ĐĂNG TẬP PODCAST MỚI
+ * ================================
+ * Hướng dẫn sử dụng:
+ * 1. Đổi FILE_NAME thành tên file .mp3 trong thư mục /episodes/
+ * 2. Điền EPISODE_TITLE (tiêu đề tập)
+ * 3. Viết EPISODE_DESCRIPTION theo template HTML bên dưới
+ * 4. Chạy: node update_db.js
+ * 5. Chạy: node generate_rss.js
+ * 6. Chạy: ./publish.sh
+ */
+
 const fs = require('fs');
 const config = require('./podcast_config.json');
 let episodes = [];
 try { episodes = require('./episodes.json'); } catch (e) { }
 const crypto = require('crypto');
 
-const file = 'episodes/5_người_bạn_cần_để_thành_công.mp3';
+// ============================================================
+// ✏️  ĐIỀN THÔNG TIN TẬP MỚI TẠI ĐÂY
+// ============================================================
+
+const FILE_NAME = 'ten_file_audio.mp3'; // Tên file trong thư mục /episodes/
+
+const EPISODE_TITLE = 'SIP XX - Tiêu Đề Tập Podcast';
+
+/**
+ * TEMPLATE MÔ TẢ HTML ĐẸP
+ * ========================
+ * Hướng dẫn:
+ * - Dùng <p>...</p> để tạo đoạn văn
+ * - Dùng <strong>...</strong> để in đậm từ khóa quan trọng
+ * - Dùng <em>...</em> để in nghiêng câu quote ấn tượng
+ * - Thêm emoji phù hợp với nội dung (🎧 💡 🔑 ✅ ❌ 🚀)
+ * - Mỗi điểm chính nên là 1 thẻ <p> riêng
+ */
+const EPISODE_DESCRIPTION = `<p><strong>Câu hỏi mở đầu thu hút sự chú ý của người nghe?</strong></p>
+
+<p>Đoạn giới thiệu ngắn về nội dung chính của tập. Nêu bối cảnh và lý do tập này quan trọng với người nghe.</p>
+
+<p>🎧 <strong>Những nội dung chính trong tập này:</strong></p>
+
+<p>💡 <strong>Điểm 1:</strong> Mô tả ngắn gọn điểm nội dung thứ nhất.</p>
+
+<p>🔑 <strong>Điểm 2:</strong> Mô tả ngắn gọn điểm nội dung thứ hai.</p>
+
+<p>✅ <strong>Điểm 3:</strong> Mô tả ngắn gọn điểm nội dung thứ ba.</p>
+
+<p><em>"Câu quote ấn tượng hoặc lời kêu gọi hành động để kết thúc." 🚀</em></p>`;
+
+// ============================================================
+// ⚙️  XỬ LÝ TỰ ĐỘNG (KHÔNG CẦN SỬA TỪ ĐÂY)
+// ============================================================
+
+const file = `episodes/${FILE_NAME}`;
 const stats = fs.statSync(file);
 const fileSize = stats.size;
 const id = crypto.randomUUID();
 
 const ep = {
     id: id,
-    title: 'SIP 33 - Công Thức "Hu": 4 Người Bạn Cần Có Để Rút Ngắn Hành Trình Thành Công',
-    description: `Tại sao 90% người học và đầu tư không đạt được kết quả như mong muốn? Lý do rất đơn giản: Chúng ta thường quá tập trung vào "Uột" (học cái gì) và "Hao" (học như thế nào) mà quên mất yếu tố quan trọng nhất: "Hu" — Học từ ai.
-Chào mừng bạn quay trở lại với Sando Investment Podcast (SIP)! Quan sát những người thành công nhất thế giới từ Uo-rần Bắp-phít đến I-lon Mắt-xờ, San-đô nhận thấy một khuôn mẫu chung: Họ không bao giờ học một mình. Thay vào đó, họ xây dựng một hệ thống những người xung quanh để tăng tốc quá trình học hỏi.
-Trong tập SIP 33 tuần này, chúng ta sẽ cùng giải mã "Công Thức Hu" — một chiến lược cốt lõi giúp bạn tránh được nhiều năm tự mò mẫm vô ích và rút ngắn thời gian thành công xuống chỉ còn vài tháng.
-🎧 Những nội dung chính trong tập này:
-Người Dạy: Tại sao người giỏi nhất chưa chắc đã là người dạy tốt nhất? Cách tìm người giúp bạn đi từ con số 0 đến khi có nền tảng vững chắc.
-Người Men-tơ (Cố vấn): Tầm quan trọng của việc có một người đi trước để vạch trần những "điểm mù" và sai lầm thực chiến trong pót-phô-li-ô của bạn.
-Người Đồng Hành (Pia): Sức mạnh của áp lực đồng trang lứa. Ai sẽ là người giữ cho bạn không bỏ cuộc khi thị trường khó khăn?
-Hình Mẫu: Cách "đứng trên vai những người khổng lồ" để tạo ra tầm nhìn, niềm tin và bản thiết kế cho tương lai của bạn.
-Bonus dành riêng cho dân kinh doanh: Giải mã nhân tố thứ 5 — Khách Hàng "ở gần". Tại sao một người dùng thật sẵn sàng phản hồi lại có giá trị hơn 1000 khách hàng nằm trong dữ liệu?
-Thiếu đi một trong những vai trò này, hành trình của bạn chắc chắn sẽ gặp trở ngại. Đừng đợi đến khi mọi thứ hoàn hảo, hãy bật ngay tập podcast này, tìm ra "Hu" mà bạn đang thiếu và bắt đầu hành trình nâng cấp bản thân ngay hôm nay!
-"Nếu bạn muốn đi nhanh, hãy đi một mình. Nếu bạn muốn đi xa, hãy đi cùng nhau." Cùng lắng nghe và hành động nhé!`,
-    audioFile: '5_người_bạn_cần_để_thành_công.mp3',
-    duration: '00:15:00', // Thời lượng tạm tính 15p (Spotify tự đọc lại trên app)
+    title: EPISODE_TITLE,
+    description: EPISODE_DESCRIPTION,
+    audioFile: FILE_NAME,
+    duration: '00:15:00', // Thời lượng tạm tính (Spotify/Apple tự đọc lại)
     fileSize: fileSize,
     publishDate: new Date().toISOString(),
     episodeNumber: config.nextEpisodeNumber
@@ -35,4 +73,13 @@ config.nextEpisodeNumber++;
 
 fs.writeFileSync('./episodes.json', JSON.stringify(episodes, null, 2));
 fs.writeFileSync('./podcast_config.json', JSON.stringify(config, null, 2));
-console.log('Đã cập nhật cơ sở dữ liệu với episode: ' + ep.title);
+
+console.log('✅ Đã thêm episode mới:');
+console.log('   Tiêu đề  :', ep.title);
+console.log('   Số tập   :', ep.episodeNumber);
+console.log('   File     :', ep.audioFile);
+console.log('   Kích thước:', (ep.fileSize / 1024 / 1024).toFixed(1), 'MB');
+console.log('');
+console.log('📋 Bước tiếp theo:');
+console.log('   1. node generate_rss.js   → Tạo file feed.xml mới');
+console.log('   2. ./publish.sh           → Đăng lên GitHub Pages');
