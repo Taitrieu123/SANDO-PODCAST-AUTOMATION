@@ -17,13 +17,29 @@ Gõ vào khung chat lệnh tương tự như sau:
 
 ### ☕️ Bước 3: Thưởng thức Cà Phê
 Phần còn lại, Antigravity sẽ tự động kích hoạt Chuỗi Dây Chuyền:
-1. **Trích xuất trí tuệ:** Truy cập trực tiếp vào cuốn sổ NotebookLM của bạn, đọc tóm tắt nội dung để tự động "đẻ" ra (1) Tiêu đề hấp dẫn, (2) Mô tả SEO chuẩn phong cách SIP.
-2. **Xử lý âm thanh:** Tự động convert file `.m4a` thành `.mp3` chất lượng Studio (định dạng tối ưu nhất cho Apple/Spotify).
-3. **Đóng gói hình ảnh:** Tự động lấy "ảnh bìa" (Cover Image) mặc định ghép vào Tập podcast mới nhất.
-4. **Cập nhật hệ thống:** Ghi nhận vào Database (`episodes.json`) và tạo bản dạng mã chuẩn XML iTunes (`feed.xml`).
-5. **Publish toàn cầu:** Tự đẩy nhạc và file XML lên máy chủ GitHub Pages.
+1. **Trích xuất trí tuệ:** Truy cập trực tiếp vào cuốn sổ NotebookLM, đọc nội dung để tự động sinh ra (1) Tiêu đề hấp dẫn, (2) Mô tả chuẩn phong cách SIP.
+2. **⏸️ Dừng chờ bạn duyệt:** Antigravity sẽ trình ra Tên tập & Mô tả đề xuất. **Bạn cần confirm (hoặc nhắn chỉnh sửa) thì mới tiếp tục.**
+3. **Xử lý âm thanh:** Tự động convert file `.m4a` thành `.mp3` chất lượng Studio (định dạng tối ưu nhất cho Apple/Spotify).
+4. **Đóng gói hình ảnh:** Tự động lấy "ảnh bìa" (Cover Image) mặc định ghép vào Tập podcast mới nhất.
+5. **Cập nhật hệ thống:** Ghi nhận vào Database (`episodes.json`) và tạo bản dạng mã chuẩn XML iTunes (`feed.xml`).
+6. **Publish toàn cầu:** Tự đẩy nhạc và file XML lên máy chủ GitHub Pages.
 
 Spotify và Apple Podcasts sẽ tự động nhận diện tập mới trong vài phút. Xong!
+
+---
+
+### 📋 Format Mô Tả Chuẩn SIP
+Vd: Tập 30 - *Quản trị bản thân như quản trị doanh nghiệp*
+
+> **Bạn quản trị công ty nghiêm túc – nhưng có quản trị bản thân nghiêm túc không?**
+>
+> ✅ Bạn có biết mình đang lãi hay lỗ?
+> ✅ Bạn có chiến lược 5 năm rõ ràng?
+> ✅ Bạn tạo giá trị gì cho thị trường?
+>
+> Lắng nghe để biết cách quản trị bản thân như một doanh nghiệp đáng đầu tư 👇
+>
+> #QuảnTrịBảnThân #LãnhĐạo #PhátTriểnBảnThân #SandoTrieu
 
 ---
 
