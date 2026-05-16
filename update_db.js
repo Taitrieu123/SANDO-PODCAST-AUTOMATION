@@ -1,73 +1,129 @@
+#!/usr/bin/env node
 /**
- * 📌 SCRIPT ĐĂNG TẬP PODCAST MỚI
- * ================================
- * Hướng dẫn sử dụng:
- * 1. Đổi FILE_NAME thành tên file .mp3 trong thư mục /episodes/
- * 2. Điền EPISODE_TITLE (tiêu đề tập)
- * 3. Viết EPISODE_DESCRIPTION theo template HTML bên dưới
- * 4. Chạy: node update_db.js
- * 5. Chạy: node generate_rss.js
- * 6. Chạy: ./publish.sh
+ * SCRIPT THÊM EPISODE MỚI VÀO DATABASE (v2 — CLI args)
+ * =====================================================
+ * Usage:
+ *   node update_db.js --file <name.mp3> --title <title> --desc <html_desc> [--duration auto|HH:MM:SS] [--dry-run]
+ *
+ * Examples:
+ *   # Add episode, auto-detect duration via ffprobe (default)
+ *   node update_db.js --file SIP_35_New.mp3 --title "SIP 35 - Demo" --desc "<p>Hello</p>"
+ *
+ *   # Specify duration manually
+ *   node update_db.js --file SIP_35_New.mp3 --title "SIP 35" --desc "<p>...</p>" --duration 00:18:42
+ *
+ *   # Dry run — print JSON, do not write files
+ *   node update_db.js --file SIP_35_New.mp3 --title "SIP 35" --desc "<p>...</p>" --dry-run
+ *
+ * Reads from JSON file (alternative to CLI args):
+ *   node update_db.js --from-draft ./draft.json
+ *   draft.json shape: { file, title, desc, duration? }
  */
 
 const fs = require('fs');
-const config = require('./podcast_config.json');
-let episodes = [];
-try { episodes = require('./episodes.json'); } catch (e) { }
+const path = require('path');
 const crypto = require('crypto');
+const { execSync } = require('child_process');
 
-// ============================================================
-// ✏️  ĐIỀN THÔNG TIN TẬP MỚI TẠI ĐÂY
-// ============================================================
+function parseArgs(argv) {
+  const args = {};
+  for (let i = 2; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--dry-run') args.dryRun = true;
+    else if (a.startsWith('--')) {
+      const key = a.slice(2).replace(/-/g, '_');
+      args[key] = argv[++i];
+    }
+  }
+  return args;
+}
 
-const FILE_NAME = 'Nhân_5_tốc_độ_học_và_hành.mp3'; // Tên file trong thư mục /episodes/
+function probeDuration(filePath) {
+  const out = execSync(
+    `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
+    { encoding: 'utf8' }
+  ).trim();
+  const totalSec = Math.round(parseFloat(out));
+  const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+  const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+  const s = String(totalSec % 60).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
 
-const EPISODE_TITLE = 'SIP 34 - Bí Quyết Nhân 5 Năng Lực Cá Nhân Trong Năm 2026: Học Nhanh, Hành Quyết Liệt';
+function validateTitle(title) {
+  if (!title || title.length === 0) throw new Error('Title is empty');
+  if (title.length > 100) {
+    console.warn(`⚠️  Title dài ${title.length} ký tự — Apple Podcasts cắt ở ~100. Cân nhắc rút gọn.`);
+  }
+}
 
-/**
- * TEMPLATE MÔ TẢ HTML ĐẸP
- * ========================
- * Hướng dẫn:
- * - Dùng <p>...</p> để tạo đoạn văn
- * - Dùng <strong>...</strong> để in đậm từ khóa quan trọng
- * - Dùng <em>...</em> để in nghiêng câu quote ấn tượng
- * - Thêm emoji phù hợp với nội dung (🎧 💡 🔑 ✅ ❌ 🚀)
- * - Mỗi điểm chính nên là 1 thẻ <p> riêng
- */
-const EPISODE_DESCRIPTION = `<p>Bạn có đang cảm thấy mình bị bỏ lại phía xa khi thị trường thay đổi chóng mặt, nhưng bản thân vẫn đang loay hoay với cách học tập và làm việc chậm chạp từ thập niên trước?</p><p>✅ <strong>Phương pháp học nhanh gấp 5 lần:</strong> Khám phá cách dùng Notebook LM của Google như một trợ lý cá nhân, kết hợp cùng chu trình học tập trải nghiệm (ELC) để tăng tốc độ tiếp thu.</p><p>✅ <strong>Tư duy "sai nhanh còn hơn đúng chậm":</strong> Xóa bỏ căn bệnh sợ sai và bẫy hoàn hảo, ngừng suy nghĩ quá lâu để bắt tay vào làm ngay, sai thì sửa để chớp lấy cơ hội.</p><p>✅ <strong>Tuyệt chiêu đúc kết để làm chủ kiến thức:</strong> Cách chuyển hóa lý thuyết thành năng lực thực chiến không bao giờ quên bằng việc đúc kết ngay thành slide, ghi âm giọng nói hoặc chia sẻ cho người khác.</p><p>✅ <strong>Xây dựng hệ sinh thái bứt phá:</strong> Bí quyết lọc và xây dựng môi trường xung quanh toàn những người ham học hỏi, vì bạn không thể phát triển nếu những người kề cận đều thụ động.</p><p>Lắng nghe ngay tập này để nâng cấp &quot;lõi&quot; năng lực của bạn, tự động kéo theo sự bứt phá x5, x10 về thu nhập và giá trị trong năm 2026! 👇</p><p>#SIP34 #SandoTrieu #SandoInvestmentPodcast #HocNhanhHanhQuyetLiet #PhatTrienBanThan #NotebookLM</p>`;
+function validateDesc(desc) {
+  if (!desc || desc.length === 0) throw new Error('Description is empty');
+  if (/<script[\s>]/i.test(desc)) throw new Error('Description chứa <script> tag — bị block bởi Spotify/Apple');
+  if (desc.length > 4000) {
+    console.warn(`⚠️  Description dài ${desc.length} ký tự — Apple Podcasts limit 4000.`);
+  }
+}
 
-// ============================================================
-// ⚙️  XỬ LÝ TỰ ĐỘNG (KHÔNG CẦN SỬA TỪ ĐÂY)
-// ============================================================
+function main() {
+  const args = parseArgs(process.argv);
 
-const file = `episodes/${FILE_NAME}`;
-const stats = fs.statSync(file);
-const fileSize = stats.size;
-const id = crypto.randomUUID();
+  let { file, title, desc, duration } = args;
+  if (args.from_draft) {
+    const draft = JSON.parse(fs.readFileSync(args.from_draft, 'utf8'));
+    file = file || draft.file;
+    title = title || draft.title;
+    desc = desc || draft.desc;
+    duration = duration || draft.duration;
+  }
 
-const ep = {
-    id: id,
-    title: EPISODE_TITLE,
-    description: EPISODE_DESCRIPTION,
-    audioFile: FILE_NAME,
-    duration: '00:15:32', // Thời lượng tạm tính (Spotify/Apple tự đọc lại)
-    fileSize: fileSize,
+  if (!file || !title || !desc) {
+    console.error('❌ Missing required args: --file, --title, --desc (or --from-draft <path>)');
+    console.error('Run with no args to see usage.');
+    process.exit(1);
+  }
+
+  validateTitle(title);
+  validateDesc(desc);
+
+  const audioPath = path.join('episodes', file);
+  if (!fs.existsSync(audioPath)) {
+    throw new Error(`Audio file không tồn tại: ${audioPath}`);
+  }
+
+  const config = require('./podcast_config.json');
+  let episodes = [];
+  try { episodes = require('./episodes.json'); } catch (_) {}
+
+  const stats = fs.statSync(audioPath);
+  const dur = (!duration || duration === 'auto') ? probeDuration(audioPath) : duration;
+
+  const ep = {
+    id: crypto.randomUUID(),
+    title,
+    description: desc,
+    audioFile: file,
+    duration: dur,
+    fileSize: stats.size,
     publishDate: new Date().toISOString(),
-    episodeNumber: config.nextEpisodeNumber
-};
+    episodeNumber: config.nextEpisodeNumber,
+  };
 
-episodes.unshift(ep);
-config.nextEpisodeNumber++;
+  if (args.dryRun) {
+    console.log('🧪 DRY RUN — episode object (KHÔNG ghi file):');
+    console.log(JSON.stringify(ep, null, 2));
+    console.log(`\nWould bump nextEpisodeNumber: ${config.nextEpisodeNumber} → ${config.nextEpisodeNumber + 1}`);
+    return;
+  }
 
-fs.writeFileSync('./episodes.json', JSON.stringify(episodes, null, 2));
-fs.writeFileSync('./podcast_config.json', JSON.stringify(config, null, 2));
+  episodes.unshift(ep);
+  config.nextEpisodeNumber++;
 
-console.log('✅ Đã thêm episode mới:');
-console.log('   Tiêu đề  :', ep.title);
-console.log('   Số tập   :', ep.episodeNumber);
-console.log('   File     :', ep.audioFile);
-console.log('   Kích thước:', (ep.fileSize / 1024 / 1024).toFixed(1), 'MB');
-console.log('');
-console.log('📋 Bước tiếp theo:');
-console.log('   1. node generate_rss.js   → Tạo file feed.xml mới');
-console.log('   2. ./publish.sh           → Đăng lên GitHub Pages');
+  fs.writeFileSync('./episodes.json', JSON.stringify(episodes, null, 2));
+  fs.writeFileSync('./podcast_config.json', JSON.stringify(config, null, 2));
+
+  console.log(`✅ Episode added: SIP ${ep.episodeNumber} — ${ep.title}`);
+  console.log(`   Duration: ${ep.duration} | Size: ${(ep.fileSize / 1024 / 1024).toFixed(1)} MB`);
+}
+
+main();

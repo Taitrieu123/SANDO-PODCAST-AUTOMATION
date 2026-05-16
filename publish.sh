@@ -1,73 +1,97 @@
 #!/bin/bash
-# Script thêm episode mới và cập nhật RSS
-# Tự động convert m4a → mp3 bằng ffmpeg
+# publish.sh v2 — Telegram-ready, CLI-driven, validated
+# =====================================================
+# Usage:
+#   ./publish.sh <audio_path> <title> <description> [--dry-run] [--skip-push]
+#
+# Flags:
+#   --dry-run    : Show what would happen, do NOT modify files or git
+#   --skip-push  : Modify files locally, do NOT git push (for review)
+#
+# Examples:
+#   ./publish.sh episodes/SIP_35.m4a "SIP 35 - Demo" "<p>Hello</p>"
+#   ./publish.sh episodes/SIP_35.m4a "SIP 35" "<p>...</p>" --dry-run
+#   ./publish.sh episodes/SIP_35.m4a "SIP 35" "<p>...</p>" --skip-push
 
-if [ "$#" -ne 3 ]; then
-    echo "Sử dụng: ./publish.sh <đường_dẫn_audio> \"<tiêu_đề>\" \"<mô_tả>\""
+set -euo pipefail
+
+if [ "$#" -lt 3 ]; then
+    echo "Usage: ./publish.sh <audio_path> <title> <description> [--dry-run] [--skip-push]"
     exit 1
 fi
 
-AUDIO_FILE=$1
-TITLE=$2
-DESC=$3
+AUDIO_FILE="$1"
+TITLE="$2"
+DESC="$3"
+shift 3
 
-echo "Đang xử lý audio: $AUDIO_FILE"
+DRY_RUN=0
+SKIP_PUSH=0
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) DRY_RUN=1; SKIP_PUSH=1 ;;
+        --skip-push) SKIP_PUSH=1 ;;
+        *) echo "Unknown flag: $arg"; exit 1 ;;
+    esac
+done
+
+# ─── PRE-CHECKS ──────────────────────────────────────────────────────────
+for tool in ffmpeg ffprobe node xmllint git; do
+    command -v "$tool" >/dev/null || { echo "❌ Missing: $tool"; exit 1; }
+done
+
+[ -f "$AUDIO_FILE" ] || { echo "❌ Audio file not found: $AUDIO_FILE"; exit 1; }
+
 BASENAME=$(basename "$AUDIO_FILE")
 EXTENSION="${BASENAME##*.}"
 
-# Tự động convert m4a/m4b/aac → mp3 nếu không phải mp3
+# ─── CONVERT m4a → mp3 IF NEEDED ─────────────────────────────────────────
 if [ "$EXTENSION" != "mp3" ]; then
     MP3_NAME="${BASENAME%.*}.mp3"
-    echo "🔄 Đang convert $BASENAME → $MP3_NAME ..."
-    ffmpeg -i "$AUDIO_FILE" -codec:a libmp3lame -qscale:a 2 -y "episodes/$MP3_NAME" 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo "❌ Lỗi convert audio! Kiểm tra ffmpeg."
-        exit 1
+    MP3_PATH="episodes/$MP3_NAME"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        echo "🧪 [dry-run] Would convert: $AUDIO_FILE → $MP3_PATH (ffmpeg libmp3lame qscale:a 2)"
+    else
+        echo "🔄 Converting $BASENAME → $MP3_NAME ..."
+        ffmpeg -i "$AUDIO_FILE" -codec:a libmp3lame -qscale:a 2 -y "$MP3_PATH" 2>/dev/null \
+            || { echo "❌ ffmpeg convert failed"; exit 1; }
+        echo "✅ Converted: $MP3_PATH"
     fi
     BASENAME="$MP3_NAME"
-    echo "✅ Convert thành công → episodes/$BASENAME"
-else
-    cp "$AUDIO_FILE" "episodes/$BASENAME"
+elif [ "$(dirname "$AUDIO_FILE")" != "episodes" ]; then
+    if [ "$DRY_RUN" -eq 1 ]; then
+        echo "🧪 [dry-run] Would copy $AUDIO_FILE → episodes/$BASENAME"
+    else
+        cp "$AUDIO_FILE" "episodes/$BASENAME"
+    fi
 fi
 
-# Thêm vào episodes.json bằng Node.js script nhỏ
-node -e "
-const fs = require('fs');
-const config = require('./podcast_config.json');
-let episodes = [];
-try { episodes = require('./episodes.json'); } catch(e) {}
-const crypto = require('crypto');
+# ─── UPDATE DB ───────────────────────────────────────────────────────────
+if [ "$DRY_RUN" -eq 1 ]; then
+    node update_db.js --file "$BASENAME" --title "$TITLE" --desc "$DESC" --dry-run
+else
+    node update_db.js --file "$BASENAME" --title "$TITLE" --desc "$DESC"
+fi
 
-const file = 'episodes/$BASENAME';
-const stats = fs.statSync(file);
-const fileSize = stats.size;
-const id = crypto.randomUUID();
+# ─── GENERATE + VALIDATE RSS ─────────────────────────────────────────────
+if [ "$DRY_RUN" -eq 1 ]; then
+    echo "🧪 [dry-run] Would run: node generate_rss.js + bash validate_feed.sh"
+    exit 0
+fi
 
-const ep = {
-  id: id,
-  title: '$TITLE',
-  description: '$DESC',
-  audioFile: '$BASENAME',
-  duration: '00:15:00', // Thời lượng tạm tính 15p (Spotify tự đọc lại trên app)
-  fileSize: fileSize,
-  publishDate: new Date().toISOString(),
-  episodeNumber: config.nextEpisodeNumber
-};
-
-episodes.unshift(ep);
-config.nextEpisodeNumber++;
-
-fs.writeFileSync('./episodes.json', JSON.stringify(episodes, null, 2));
-fs.writeFileSync('./podcast_config.json', JSON.stringify(config, null, 2));
-console.log('Đã cập nhật cơ sở dữ liệu với episode: ' + ep.title);
-"
-
-# Sinh RSS feed
 node generate_rss.js
+bash validate_feed.sh || { echo "❌ feed.xml validation failed — aborting"; exit 1; }
 
-# Git add, commit và push tự động
+# ─── COMMIT + PUSH ───────────────────────────────────────────────────────
+if [ "$SKIP_PUSH" -eq 1 ]; then
+    echo "⏸  --skip-push: file đã update local, KHÔNG commit/push. Review xong gõ:"
+    echo "     git add . && git commit -m 'Auto-publish: $TITLE' && git push origin main"
+    exit 0
+fi
+
 git add .
-git commit -m "Auto-publish episode: $TITLE"
+git commit -m "Auto-publish: $TITLE"
 git push origin main
 
-echo "✅ Hoàn tất! RSS feed đã được cập nhật trên GitHub."
+echo "✅ Published. Feed: https://Taitrieu123.github.io/SANDO-PODCAST-AUTOMATION/feed.xml"
+echo "   Spotify + Apple Podcasts cào trong 5-15 phút."

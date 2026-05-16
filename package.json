@@ -1,0 +1,27 @@
+{
+  "name": "sando-podcast-automation",
+  "version": "2.0.0",
+  "description": "SIP — Sando Investment Podcast automation. RSS feed generator + auto-publish to GitHub Pages → Spotify/Apple.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "publish": "bash publish.sh",
+    "publish:dry": "bash publish.sh --dry-run",
+    "publish:review": "bash publish.sh --skip-push",
+    "validate": "bash validate_feed.sh",
+    "generate-rss": "node generate_rss.js"
+  },
+  "dependencies": {},
+  "systemRequirements": {
+    "ffmpeg": "Required for m4a → mp3 conversion",
+    "ffprobe": "Required for auto-detect duration",
+    "xmllint": "Required for feed validation"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Taitrieu123/SANDO-PODCAST-AUTOMATION.git"
+  },
+  "author": "Sando Triệu <copetrieu93@gmail.com>",
+  "license": "UNLICENSED"
+}
